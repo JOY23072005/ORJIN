@@ -99,7 +99,7 @@ Users can run code files directly inside the app using a **run button**. Output 
 ### 1️⃣ Clone the repo
 
 ```bash
-git clone https://github.com/omadityajha/ORJ.git
+git clone https://github.com/JOY23072005/ORJIN.git
 cd ORJ
 ```
 
