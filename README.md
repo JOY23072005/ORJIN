@@ -100,7 +100,7 @@ Users can run code files directly inside the app using a **run button**. Output 
 
 ```bash
 git clone https://github.com/JOY23072005/ORJIN.git
-cd ORJ
+cd ORJIN
 ```
 
 ### 2️⃣ Install dependencies
