@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary Colors */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+  --color-primary-950: #082f49;
+
+  /* Secondary Colors */
+  --color-secondary-50: #f5f3ff;
+  --color-secondary-100: #ede9fe;
+  --color-secondary-200: #ddd6fe;
+  --color-secondary-300: #c4b5fd;
+  --color-secondary-400: #a78bfa;
+  --color-secondary-500: #8b5cf6;
+  --color-secondary-600: #7c3aed;
+  --color-secondary-700: #6d28d9;
+  --color-secondary-800: #5b21b6;
+  --color-secondary-900: #4c1d95;
+  --color-secondary-950: #2e1065;
+
+  /* Font */
+  --font-family-sans: 'Inter', 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace, sans-serif;
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    font-family: var(--font-family-sans);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Dark theme (default) */
+  .dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+    --border-primary: #334155;
+    --border-secondary: #475569;
+  }
+
+  /* Light theme */
+  .light {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border-primary: #e2e8f0;
+    --border-secondary: #cbd5e1;
+  }
+
+  /* Apply theme colors */
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+}
+
+@layer components {
+  /* Base Button */
+  .btn {
+    @apply cursor-pointer px-4 py-2 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition duration-200 ease-in-out;
+  }
+
+  /* Filled buttons */
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500;
+  }
+
+  /* Additional button styles */
+  .btn-outline {
+    @apply border border-white text-white hover:bg-white hover:text-gray-900;
+  }
+
+  .btn-glow {
+    @apply bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg hover:brightness-110;
+  }
+
+  .btn-glass {
+    @apply bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/20;
+  }
+
+  /* Card base */
+  .card {
+    @apply rounded-xl shadow-lg p-6;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+  }
+
+  /* Theme-aware input styles */
+  .input-theme {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+  }
+
+  .input-theme:focus {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+  }
+
+  /* Theme-aware background classes */
+  .bg-theme-primary {
+    background-color: var(--bg-primary);
+  }
+
+  .bg-theme-secondary {
+    background-color: var(--bg-secondary);
+  }
+
+  .bg-theme-tertiary {
+    background-color: var(--bg-tertiary);
+  }
+
+  /* Theme-aware text classes */
+  .text-theme-primary {
+    color: var(--text-primary);
+  }
+
+  .text-theme-secondary {
+    color: var(--text-secondary);
+  }
+
+  .text-theme-muted {
+    color: var(--text-muted);
+  }
+
+  /* Theme-aware border classes */
+  .border-theme-primary {
+    border-color: var(--border-primary);
+  }
+
+  .border-theme-secondary {
+    border-color: var(--border-secondary);
+  }
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  background-color: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background-color: #6366f1; /* Indigo */
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #7c3aed; /* Purple */
+}
+
+/* Accessibility outline management */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Animations */
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+}

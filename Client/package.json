@@ -1,0 +1,47 @@
+{
+  "name": "orj-new",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.0",
+    "@monaco-editor/react": "^4.7.0",
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react-router-dom": "^5.3.3",
+    "@xterm/xterm": "^5.5.0",
+    "editor": "^1.0.0",
+    "fabric": "^6.7.0",
+    "lodash": "^4.17.21",
+    "lucide-react": "^0.525.0",
+    "monaco-editor": "^0.52.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.3",
+    "socket.io-client": "^4.8.1",
+    "tailwindcss": "^4.1.11",
+    "y-monaco": "^0.1.6",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.27"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "@types/lodash": "^4.17.20",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@types/react-resizable": "^3.0.8",
+    "@vitejs/plugin-react": "^4.5.2",
+    "eslint": "^9.29.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.2.0",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.34.1",
+    "vite": "^7.0.0"
+  }
+}
