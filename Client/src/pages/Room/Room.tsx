@@ -1,14 +1,13 @@
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useUser } from '../../context/UserContext';
+import { useUser } from '../../context/UserContext.tsx';
 import { useRoom } from '../../context/RoomContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '@context/SocketProvider';
-import { toast, ToastContainer, Bounce } from 'react-toastify';
+import { toast } from 'react-toastify';
 import FileEditor from '../../components/FileEditor';
 import CanvasBoard from '../../components/CanvasBoard';
-import LivePreview from '../../components/LivePreview';
-import ThemeToggle from '../../components/auth/ThemeToggle';
+import Preview from '@components/Preview.tsx';
 
 interface RoomMember {
   userId: string;
@@ -24,14 +23,16 @@ interface Room {
 
 const Room = () => {
   const { roomId } = useParams<{ roomId: string }>();
-  const { logout, user } = useUser();
-  const { joinRoom, getRoomById, getUserRole, joinedRooms } = useRoom();
+  const { user } = useUser();
+  const { joinRoom, joinedRooms } = useRoom();
+  const navigate = useNavigate();
+  const { theme } = useTheme();
+
   const [activeTab, setActiveTab] = useState<'files' | 'canvas' | 'preview'>('files');
   const [roomData, setRoomData] = useState<Room | null>(null);
   const socket = useSocket();
+
   const hasJoinedRef = useRef(false);
-  const navigate = useNavigate();
-  const { theme } = useTheme();
 
   const handleInvite = () => {
     if (roomId) {
@@ -40,26 +41,39 @@ const Room = () => {
     }
   };
 
+  const handleError = ({message}:{message:string})=>{
+    toast.error(message);
+  }
+
+  useEffect(()=>{
+    if(!user) return;
+    socket.emit("room:join", { roomId: roomId,isAnonymous:user.isAnonymous, email: user.email });
+    return () => {
+      socket.emit("room:leave", { roomId });
+    };
+  },[roomId,user])
+
   useEffect(() => {
+    if(!user) return;
     if (!roomId || hasJoinedRef.current) return;
-
-    socket.emit("room:join", { roomId: roomId, email: user?.email });
-
     if (roomId === "ORJINDummyRoom") {
-      const dummyRoom: Room = {
+      if (!joinedRooms.find(room => room.id === "ORJINDummyRoom")){ 
+        const dummyRoom: Room = {
         id: "ORJINDummyRoom",
         name: "ORJINDummyRoom",
         members: [],
         createdBy: "ORJIN"
-      };
-      setRoomData(dummyRoom);
-      toast.success("Room joined successfully!");
-      return;
+        };
+        setRoomData(dummyRoom);
+        joinRoom(dummyRoom);
+      }
+      hasJoinedRef.current = true;
     }
 
     const handleRoomJoined = ({ roomData, member }: { roomData: Room, member: RoomMember }) => {
       // console.log("here is member & roomData: ",member);
       toast.success(`${member.userId} Successfully Joined room`);
+      if(user.isAnonymous) return;//if guest return
       setRoomData(roomData);
       if (!joinedRooms.find(room => room.id === roomData.id)) joinRoom(roomData);
       hasJoinedRef.current = true;
@@ -72,10 +86,11 @@ const Room = () => {
 
     socket.on("room:joined", handleRoomJoined);
     socket.on("room:error", handleRoomError);
-
+    socket.on("file:error",handleError);
     return () => {
       socket.off("room:joined", handleRoomJoined);
       socket.off("room:error", handleRoomError);
+      socket.off("file:error",handleError);
     };
   }, [roomId, socket, user?.email, joinRoom]);
 
@@ -107,11 +122,7 @@ const Room = () => {
             <div className="flex-1 overflow-hidden w-full">
               {activeTab === 'files' && <FileEditor />}
               {activeTab === 'canvas' && <CanvasBoard />}
-              {activeTab === 'preview' && <LivePreview
-                html={"<html><body><h1 id='heading'>Hello World</h1></body></html>"}
-                css={"*{background-color:black;color:white;}"}
-                js={"document.getElementById('heading').style.border='1px solid red;'"}
-              />}
+              {activeTab === 'preview' && <Preview/>}
             </div>
           </section>
         </div>

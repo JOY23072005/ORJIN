@@ -89,17 +89,21 @@ export default function roomSocketHandler(io, socket) {
     socket.emit("room:deleted", { roomId });
   });
 
-  socket.on("room:join", async ({ roomId, email }) => {
+  socket.on("room:join", async ({ roomId,isAnonymous, email }) => {
+    if (isAnonymous || roomId === "ORJINDummyRoom") {
+      socket.join("ORJINDummyRoom");
+      socket.data.roomId = roomId;
+      io.to(roomId).emit("file:refresh");  // now triggers filetree fetch
+      io.to(roomId).emit("room:joined", { roomData: null, member: { userId: "anonymous", role: "viewer" } });
+      // console.log("everything emitted to room!");    
+      return;
+    }
+
     if (!roomId || !email) {
       socket.emit("room:error", { message: "Room ID is required" });
       return;
     }
-
-    if (email === 'Guest') {
-      socket.join("ORJINDummyRoom");
-      return;
-    }
-
+    
     const room = await Room.findOne({ roomId });
     if (!room) {
       socket.emit("room:error", { message: `No room exists with RoomId: ${roomId}` });
@@ -116,7 +120,23 @@ export default function roomSocketHandler(io, socket) {
     const member = isMember?isMember:{ userId: email, role: 'editor'};
     socket.join(roomId);
     roomToUser[roomId] = email;
+    socket.data.roomId = roomId;
     io.to(roomId).emit("file:refresh");
     io.to(roomId).emit("room:joined", { roomData: room, member: member });
   });
+
+  socket.on("room:leave", ({ roomId }) => {
+    if (socket.data.roomId === roomId) {
+      socket.leave(roomId);
+      delete socket.data.roomId;
+      console.log(`${socket.id} left the room`);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    if (socket.data.roomId) {
+      socket.leave(socket.data.roomId);
+    }
+  });
+
 }

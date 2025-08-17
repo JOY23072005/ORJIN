@@ -11,7 +11,7 @@ export default function canvasSocketHandler(io, socket) {
       roomToLinesMap.set(roomId, []);
     }
 
-    const lines = roomToLinesMap.get(roomId);
+    const lines = roomToLinesMap.get(roomId) || [];
     console.log(`[canvas] ${socket.id} joining ${roomId}`);
 
     // Join socket room for broadcasting
@@ -35,11 +35,8 @@ export default function canvasSocketHandler(io, socket) {
     socket.to(roomId).emit('drawing', {data,roomId});
   });
 
-  socket.on('clear', (roomId) => {
-    const lines = roomToLinesMap.get(roomId);
-    if (!lines) return;
-
-    lines.length = 0;
+  socket.on('clear', ({roomId}) => {
+    roomToLinesMap.set(roomId,[]);
     socket.to(roomId).emit('clear');
   });
 }

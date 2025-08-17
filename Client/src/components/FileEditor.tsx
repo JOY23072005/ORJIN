@@ -257,6 +257,7 @@ const FileEditor: React.FC = () => {
     const currentOpenState = getOpenState(fileTree);
     socket.emit("filetree:get", { roomId });
     socket.once("filetree:data", (tree) => {
+      // console.log("filetree received",tree)
       setFileTree(buildFileTree(tree, currentOpenState));
       setIsLoading(false);
     });

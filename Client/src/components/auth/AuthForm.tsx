@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 interface AuthFormProps {
@@ -16,15 +15,22 @@ const AuthForm: React.FC<AuthFormProps> = ({  setLoading, loading }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
 
   const handleGuest = async ()=>{
+    setLoading(true);
+    try{
     const success = await guest();
     if(success){
       navigate('/');
+      toast.success("Guest user logged in successfully!")
     }
     else{
       toast.error('Error while logging in');
+    }
+    } catch (err) {
+      toast.error('An error occurred during login');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -32,16 +38,9 @@ const AuthForm: React.FC<AuthFormProps> = ({  setLoading, loading }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Check credentials in localStorage
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find((u: any) => u.email === email && u.password === password);
-      if (user) {
-        const success = await login(email, password);
-        if (success) {
-          navigate('/');
-        } else {
-          toast.error('Invalid email or password');
-        }
+      const success = await login(email, password);
+      if (success) {
+        navigate('/');
       } else {
         toast.error('Invalid email or password');
       }
@@ -97,21 +96,6 @@ const AuthForm: React.FC<AuthFormProps> = ({  setLoading, loading }) => {
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <label className={`flex items-center gap-2 text-sm ${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={e => setRemember(e.target.checked)}
-            className={`rounded focus:ring-primary-500 ${
-              theme === 'dark'
-                ? 'border-gray-600 bg-gray-800 text-primary-600'
-                : 'border-gray-300 bg-white text-primary-600'
-            }`}
-          />
-          Remember me
-        </label>
         <button className="text-sm text-primary-500 hover:underline" onClick={handleGuest}>Login as guest</button>
         <a href="#" className="text-sm text-primary-500 hover:underline">Forgot password?</a>
       </div>

@@ -5,6 +5,7 @@ const Login = lazy(() => import('../pages/Login/Login'))
 const Signup = lazy(() => import('../pages/Signup/Signup'))
 const Dashboard = lazy(() => import('../pages/Dashboard/Dashboard'))
 const Room = lazy(() => import('../pages/Room/Room'))
+const VerifyEmail = lazy(()=>import('../pages/VerifyEmail/VerifyEmail'))
 
 // Route configuration
 const routes = [
@@ -17,6 +18,12 @@ const routes = [
   {
     path: '/signup',
     component: Signup,
+    exact: true,
+    protected: false,
+  },
+  {
+    path: '/verify-email',
+    component: VerifyEmail,
     exact: true,
     protected: false,
   },

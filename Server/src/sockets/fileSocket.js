@@ -26,6 +26,7 @@ export default function fileSocketHandler(io, socket) {
       if (!validateRoomMembership(roomId)) return;
       const files = await File.find({ roomId }, { content: 0, __v: 0 })
         .sort({ parent: 1, name: 1 });
+      // console.log("sending file tree");
       socket.emit("filetree:data", files);
     } catch (err) {
       socket.emit("filetree:error", { message: "Failed to fetch file tree" });
@@ -92,11 +93,27 @@ export default function fileSocketHandler(io, socket) {
     if (awareness) {
       try {
         applyAwarenessUpdate(awareness, new Uint8Array(update), socket.id);
-        console.log(update);
+        // console.log(update);
         socket.to(roomId).emit("awareness:update", { filePath, update });
       } catch (e) {
         console.error("Failed to apply awareness update:", e);
       }
+    }
+  });
+
+  socket.on("file:read", async ({ roomId, path }, callback) => {
+    try {
+      const file = await File.findOne({ roomId, path });
+      // console.log(file);
+      if (!file) {
+        return callback({ success: false, error: "File not found" });
+      }
+      
+      // Return file content back to client
+      callback({ success: true, content: file.content });
+    } catch (err) {
+      console.error(err);
+      callback({ success: false, error: "Server error" });
     }
   });
 

@@ -6,11 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import { useRoom } from '@context/RoomContext';
 import { useTheme } from '@context/ThemeContext';
 import { useFileTree } from '@context/FileTreeContext';
-import { useUser } from '@context/UserContext';
+import { useUser } from '@context/UserContext.tsx';
 import { useSocket } from '@context/SocketProvider';
 import { toast } from 'react-toastify';
 import { ToastPrompt } from '@components/auth/ToastPrompt';
-import { update } from 'lodash';
 
 interface RoomMember {
   userId: string;
@@ -84,11 +83,6 @@ const Dashboard: React.FC = () => {
   const { user } = useUser();
   const socket = useSocket();
   const [loading, setLoading] = useState(false);
-  const [name,setName] = useState<string>('');
-
-  useEffect(()=>{
-    setIsGuest(Boolean(localStorage.getItem('isGuestUser')));
-  },[isGuest]);
 
   const handleRoomUpdate = useCallback(({ rooms }: { rooms: Room[] }) => {
     setJoinedRooms(rooms);
@@ -132,12 +126,15 @@ const Dashboard: React.FC = () => {
     };
   }, [socket, handleRoomUpdate]);
 
-  // Initial fetch
-  useEffect(() => {
-    if (user?.email && user?.email !== 'Guest') {
+  useEffect(()=>{
+    if(!user) return;
+    if(user.isAnonymous){
+      setIsGuest(true);
+    }
+    else{
       getRooms();
     }
-  }, [user?.email, getRooms]);
+  },[isGuest,user,getRooms]);
 
   const showPrompt = (msg:string) => {
     return new Promise((resolve) => {
@@ -163,7 +160,7 @@ const Dashboard: React.FC = () => {
   }
 
   const handleCreateRoom = useCallback(async() => {
-    if(user?.email==='Guest'){
+    if(user?.isAnonymous){
       toast.error('Guest users can only join room please click "Join Room" for joining "dummyroom"');
       return;
     }
@@ -174,13 +171,13 @@ const Dashboard: React.FC = () => {
       else 
         socket.emit('room:create',{email:user?.email});
     }
-  },[socket,user?.email]);
+  },[socket,user]);
 
   const handleJoin = async ({roomId}:{roomId:string})=>{
-    if(user){
+    if(user && user.email && user.name){
       const newRoom:Room = {
         id:roomId,
-        name:name,
+        name:user.name,
         createdBy: user.email,
         members:[{
           userId:user.email,

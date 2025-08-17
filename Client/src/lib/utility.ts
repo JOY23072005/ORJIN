@@ -149,24 +149,6 @@ const getFileTypeInfo = (fileName: string): FileTypeInfo => {
   return fileTypeMap[extension] || { type: 'unknown', color: 'text-gray-500', category: 'other' };
 };
 
-// ✅ Recursive tree updater to update file content
-// const updateTree = (
-//   nodes: FileNode[],
-//   id: string,
-//   updater: (node: FileNode) => FileNode
-// ): FileNode[] => {
-//   return nodes.map((node) => {
-//     if (node.id === id) return updater(node);
-//     if (node.children) {
-//       return {
-//         ...node,
-//         children: updateTree(node.children, id, updater)
-//       };
-//     }
-//     return node;
-//   });
-// };
-
 export const getUniqueName = (base: string, existingNames: Set<string>, ext = ''): string => {
   if (!existingNames.has(base + ext)) return base + ext;
   let i = 1;

@@ -5,7 +5,10 @@ import ThemeToggle from '../../components/auth/ThemeToggle';
 import FooterLinks from '../../components/auth/FooterLinks';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { toast, ToastContainer, Bounce } from 'react-toastify';
+import { toast } from 'react-toastify';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { auth,db } from '../../lib/firebase.ts';
+import { setDoc, doc } from 'firebase/firestore';
 
 const Signup = () => {
   const [name, setName] = useState('');
@@ -18,58 +21,62 @@ const Signup = () => {
 
   const validateEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !email || !password || !confirmPassword) {
-      toast.error('All fields are required.');
-      return;
-    }
-    if (!validateEmail(email)) {
-      toast.error('Please enter a valid email address.');
-      return;
-    }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match.');
-      return;
-    }
-    setLoading(true);
-    // Store user in localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    if (users.find((u: any) => u.email === email)) {
-      toast.error('An account with this email already exists.');
-      setLoading(false);
-      return;
-    }
-    users.push({ name, email, password });
-    localStorage.setItem('users', JSON.stringify(users));
-    setTimeout(() => {
-      setLoading(false);
-      navigate('/login');
-    }, 1000);
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!name || !email || !password || !confirmPassword) {
+    toast.error('All fields are required.');
+    return;
+  }
+  if (!validateEmail(email)) {
+    toast.error('Please enter a valid email address.');
+    return;
+  }
+  if (password.length < 6) {
+    toast.error('Password must be at least 6 characters.');
+    return;
+  }
+  if (password !== confirmPassword) {
+    toast.error('Passwords do not match.');
+    return;
+  }
+
+  setLoading(true);
+
+  // ... (inside the handleSubmit function)
+
+try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Send the verification email to the user
+    await sendEmailVerification(user);
+
+    // Now, save the user data to Firestore
+    const userData = {
+      email: user.email,
+      name: name,
+    };
+    
+    await setDoc(doc(db, "Users", user.uid), userData);
+
+    toast.success("User registered successfully! Please check your email to verify your account.");
+
+    // Navigate the user to a page that tells them to check their email
+    navigate('/verify-email');
+
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    toast.error("An error occurred during SignUp!");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <AuthLayout>
       <div className="flex flex-col h-full w-full items-center justify-center animate-fade-in">
         <AuthHeader />
         <div className="w-full max-w-md mt-6">
-          <ToastContainer
-            position="top-center"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick={false}
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme={theme}
-            transition={Bounce}
-          />
           <form className="space-y-6 animate-fade-in" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-4">
               <div>

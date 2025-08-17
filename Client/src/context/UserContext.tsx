@@ -1,9 +1,21 @@
-import { createContext, useContext, useState } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { 
+  type User as FirebaseUser, 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  signInAnonymously 
+} from "firebase/auth";
+import { auth, db } from "../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { useRoom } from "./RoomContext";
 
 type User = {
-  email: string;
-  name?: string;
+  uid: string;
+  email?: string | null;
+  name?: string | null;
+  isAnonymous?: boolean;
 };
 
 type UserContextType = {
@@ -11,94 +23,99 @@ type UserContextType = {
   isAuthenticated: boolean;
   guest: () => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  loading: boolean;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  
+  const [loading, setLoading] = useState(true);
+  const {setJoinedRooms} = useRoom();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        try {
+          const docRef = doc(db, "Users", firebaseUser.uid);
+          const docSnap = await getDoc(docRef);
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: docSnap.exists() ? docSnap.data().name : null,
+            isAnonymous: firebaseUser.isAnonymous,
+          });
+        } catch (e) {
+          console.error("Error fetching user doc:", e);
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: null,
+            isAnonymous: firebaseUser.isAnonymous,
+          });
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const guest = async (): Promise<boolean> => {
-    // This would typically be an API call to your authentication endpoint
-    // For now, we'll simulate a successful login with any credentials
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setUser({email:"Guest"});
-      localStorage.setItem('isGuestUser', 'true');
+      await signInAnonymously(auth);
       return true;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Guest login error:", error);
       return false;
     }
   };
+
   const login = async (email: string, password: string): Promise<boolean> => {
-    // This would typically be an API call to your authentication endpoint
-    // For now, we'll simulate a successful login with any credentials
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Simple validation (would be done server-side in a real app)
-      if (email && password.length >= 6) {
-        setUser({ email });
-        // Store auth token in localStorage or secure cookie in a real app
-        localStorage.setItem('isAuthenticated', 'true');
-        return true;
-      }
-      return false;
+      await signInWithEmailAndPassword(auth, email, password);
+      return true;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       return false;
     }
   };
-  
-  const logout = () => {
-    setUser(null);
-    // Remove auth token
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('isGuestUser');
+
+  const logout = async () => {
+    setLoading(true);
+    try {
+      await signOut(auth);
+      setJoinedRooms([]);//cleanup
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setLoading(false); 
+    }
   };
-  
-  // Check if user was previously authenticated
-  useState(() => {
-    const checkAuth = () => {
-      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
-      if (isAuth && !user) {
-        // In a real app, you would validate the token here
-        // and possibly fetch the user profile
-        const savedEmail = localStorage.getItem('userEmail');
-        if (savedEmail) {
-          setUser({ email: savedEmail });
-        }
-      }else{
-        const isGuest = localStorage.getItem('isGuestUser')==="true";
-        if(isAuth && !user) {
-          setUser({email:"Guest"});
-        }
-      }
-    };
-    
-    checkAuth();
-  });
-  
-  const value = {
+
+
+
+  const value: UserContextType = {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !user.isAnonymous,
     guest,
     login,
-    logout
+    logout,
+    loading,
   };
-  
-  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
+
+  return (
+    <UserContext.Provider value={value}>
+      {children}
+    </UserContext.Provider>
+  );
 };
 
-// Custom hook to use the user context
 export const useUser = () => {
   const context = useContext(UserContext);
-  if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
+  if (!context) throw new Error("useUser must be used within a UserProvider");
   return context;
 };

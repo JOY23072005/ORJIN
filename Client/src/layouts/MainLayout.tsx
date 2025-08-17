@@ -2,8 +2,8 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from '../components/auth/ThemeToggle';
-import { useEffect, useState } from 'react';
-import {ToastContainer,Bounce, toast} from 'react-toastify';
+import { useEffect } from 'react';
+import { toast} from 'react-toastify';
 const MainLayout = () => {
   const { logout, user } = useUser();
   const { theme } = useTheme();
@@ -73,21 +73,6 @@ const MainLayout = () => {
         </div>
       </header>
 
-      {/* {!backendOnline && <ErrorAlert message={`Waiting for backend ${import.meta.env.VITE_SERVER_URL} to Connect`}/>} */}
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick={false}
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme={theme}
-        transition={Bounce}
-        />
-
       {/* Main content */}
       <main className="flex-grow w-full">
         <div className="px-4 sm:px-6 lg:px-10 py-4 w-full">
@@ -95,7 +80,7 @@ const MainLayout = () => {
             <div className={`mb-4 text-sm ${
               theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}>
-              Logged in as: {user.email}
+              Logged in as: {user.name}
             </div>
           )}
           <Outlet />

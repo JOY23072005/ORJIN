@@ -35,7 +35,7 @@ const CanvasBoard = () => {
     setUserId(uuidv4());
     socket.emit('canvas:join', { roomId });
 
-    socket.on('drawing', ({ data }: { data: DrawingEventData }) => {
+    const handleDrawing = ({ data }: { data: DrawingEventData }) => {
       setLines((prevLines) => {
         const existingLineIndex = prevLines.findIndex((l) => l.id === data.line.id);
         if (existingLineIndex !== -1) {
@@ -45,15 +45,23 @@ const CanvasBoard = () => {
         }
         return [...prevLines, data.line];
       });
-    });
+    }
+
+    socket.on('drawing', handleDrawing);
 
     socket.on('canvasState', (initialLines: LineData[]) => {
       setLines(initialLines);
     });
 
     socket.on('clear', () => {
+      console.log(lines);
       setLines([]);
     });
+    return ()=>{
+      socket.off('drawing',handleDrawing);
+      socket.off('canvasState',setLines);
+      socket.off('clear');
+    }
   }, []);
 
   const handleMouseDown = (e: any) => {
