@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Suspense } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useSocket } from '@context/SocketProvider';
 import * as KonvaComponents from 'react-konva';
@@ -65,6 +65,7 @@ const CanvasBoard = () => {
   }, []);
 
   const handleMouseDown = (e: any) => {
+    console.log(e);
     setIsDrawing(true);
     const stage = stageRef.current;
     if (stage) {
@@ -82,6 +83,7 @@ const CanvasBoard = () => {
   };
 
   const handleMouseMove = (e: any) => {
+    console.log(e);
     if (!isDrawing) return;
     const stage = stageRef.current;
     if (stage) {

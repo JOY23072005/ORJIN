@@ -102,13 +102,6 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
     }
   };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShowContextMenu(true);
-    onContextMenu(e, node);
-  };
-
   const startRename = () => {
     setIsRenaming(true);
     setShowContextMenu(false);
