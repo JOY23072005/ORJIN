@@ -9,6 +9,7 @@ type User = {
 type UserContextType = {
   user: User | null;
   isAuthenticated: boolean;
+  guest: () => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 };
@@ -18,6 +19,20 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   
+  const guest = async (): Promise<boolean> => {
+    // This would typically be an API call to your authentication endpoint
+    // For now, we'll simulate a successful login with any credentials
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setUser({email:"Guest"});
+      localStorage.setItem('isGuestUser', 'true');
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
+  };
   const login = async (email: string, password: string): Promise<boolean> => {
     // This would typically be an API call to your authentication endpoint
     // For now, we'll simulate a successful login with any credentials
@@ -43,6 +58,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     // Remove auth token
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('isGuestUser');
   };
   
   // Check if user was previously authenticated
@@ -56,6 +72,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         if (savedEmail) {
           setUser({ email: savedEmail });
         }
+      }else{
+        const isGuest = localStorage.getItem('isGuestUser')==="true";
+        if(isAuth && !user) {
+          setUser({email:"Guest"});
+        }
       }
     };
     
@@ -65,6 +86,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     user,
     isAuthenticated: !!user,
+    guest,
     login,
     logout
   };

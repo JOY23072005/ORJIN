@@ -1,17 +1,26 @@
 import { Link } from "react-router-dom";
 import { Users } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useSocket } from "@context/SocketProvider";
+import { useUser } from "@context/UserContext";
 
-interface RoomCardProps {
-  id: number;
-  name: string;
-  users: number;
-  index?: number;
+interface RoomMember {
+  userId: string;
+  role: 'owner' | 'editor' | 'viewer';
 }
 
-const RoomCard = ({ id, name, users, index = 0 }: RoomCardProps) => {
+interface RoomCardProps {
+  id: string;
+  name: string;
+  createdBy: string;
+  members: RoomMember[];
+  index: number;
+}
+
+const RoomCard = ({ id, name, members, index=0 }: RoomCardProps) => {
   const { theme } = useTheme();
-  
+  const socket = useSocket();
+  const {user} = useUser();
   return (
     <div
       className={`shadow-xl rounded-2xl p-7 flex flex-col gap-4 border transition-transform duration-300 hover:scale-105 hover:shadow-2xl hover:-translate-y-1 animate-fade-in group cursor-pointer ${
@@ -37,7 +46,7 @@ const RoomCard = ({ id, name, users, index = 0 }: RoomCardProps) => {
         theme === 'dark' ? 'text-indigo-100' : 'text-indigo-700'
       }`}>
         <Users className="w-4 h-4 opacity-70" />
-        <span>{users} member{users !== 1 ? 's' : ''}</span>
+        <span>{members.length} member{members?.length !== 1 ? 's' : ''}</span>
       </div>
       <Link
         to={`/room/${id}`}
@@ -45,6 +54,12 @@ const RoomCard = ({ id, name, users, index = 0 }: RoomCardProps) => {
       >
         Enter Room
       </Link>
+      <button
+        onClick={()=>socket.emit('room:delete',{roomId:id,email:user?.email})}
+        className="mt-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-700 text-center font-semibold shadow transition-all duration-200 hover:scale-105 hover:cursor-pointer focus:outline-none"
+      >
+        Delete Room
+      </button>
     </div>
   );
 };

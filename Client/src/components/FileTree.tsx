@@ -15,6 +15,7 @@ import { getFileTypeInfo, type FileTypeInfo, type FileNode,
 import { useFileTree } from "../context/FileTreeContext";
 import { useSocket } from "../context/SocketProvider";
 import { useParams } from 'react-router-dom';
+import { useTheme } from '@context/ThemeContext';
 
 interface FileIconProps {
   fileName: string;
@@ -57,6 +58,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   const { roomId } = useParams<{ roomId: string }>();
   const { fileTree } = useFileTree();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { theme } = useTheme();
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -190,100 +192,140 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   return (
     <div className="relative">
       <div
-        className={`flex items-center py-1 px-2 hover:bg-secondary-600/10 cursor-pointer select-none relative group ${
-          selectedId === node.id ? 'bg-secondary-900/30 border-r-2 border-primary-500' : ''
-        }`}
+        className={`flex items-center py-1 px-2 cursor-pointer select-none relative group transition-colors
+          ${selectedId === node.id
+            ? theme === 'dark'
+              ? 'bg-secondary-900/30 border-r-2 border-primary-500'
+              : 'bg-primary-100 border-r-2 border-primary-500'
+            : theme === 'dark'
+              ? 'hover:bg-secondary-600/10'
+              : 'hover:bg-primary-50'
+          }`}
         style={{ paddingLeft: paddingLeft + 8 }}
         onClick={handleSelect}
-        onContextMenu={handleContextMenu}
+        onContextMenu={(e) => onContextMenu(e, node)}
       >
         {node.type === 'folder' && (
           <button
             onClick={handleToggle}
-            className="flex items-center justify-center w-4 h-4 mr-1 hover:bg-gray-200 rounded"
+            className={`flex items-center justify-center w-4 h-4 mr-1 rounded ${
+              theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
+            }`}
           >
             {node.isOpen ? (
-              <ChevronDown className="w-3 h-3 text-gray-600" />
+              <ChevronDown className={`w-3 h-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`} />
             ) : (
-              <ChevronRight className="w-3 h-3 text-gray-600" />
+              <ChevronRight className={`w-3 h-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`} />
             )}
           </button>
         )}
-        
+
         {node.type === 'file' && <div className="w-4 h-4 mr-1" />}
-        
+
         <div className="flex items-center mr-2">
           {node.type === 'folder' ? (
             node.isOpen ? (
-              <FolderOpen className="w-4 h-4 text-primary-600" />
+              <FolderOpen className={`w-4 h-4 ${theme === 'dark' ? 'text-primary-400' : 'text-primary-600'}`} />
             ) : (
-              <Folder className="w-4 h-4 text-primary-600" />
+              <Folder className={`w-4 h-4 ${theme === 'dark' ? 'text-primary-400' : 'text-primary-600'}`} />
             )
           ) : (
             <FileIcon fileName={node.name} />
           )}
         </div>
-        
+
         {isRenaming ? (
           <input
             ref={inputRef}
             type="text"
             value={newName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
+            onChange={(e) => setNewName(e.target.value)}
             onBlur={handleRename}
             onKeyDown={handleKeyDown}
-            className="flex-1 px-1 py-0.5 text-sm border border-primary-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            className={`flex-1 px-1 py-0.5 text-sm border rounded focus:outline-none focus:ring-1 
+              ${theme === 'dark'
+                ? 'bg-secondary-800 border-primary-500 text-white focus:ring-primary-500'
+                : 'bg-white border-primary-300 text-gray-900 focus:ring-primary-500'
+              }`}
+            onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className="flex-1 text-sm text-primary-100 truncate">{node.name}</span>
+          <span
+            className={`flex-1 text-sm truncate ${
+              theme === 'dark' ? 'text-primary-100' : 'text-gray-800'
+            }`}
+          >
+            {node.name}
+          </span>
         )}
-        
+
         {!isRenaming && (
           <button
-            onClick={(e: React.MouseEvent) => {
+            onClick={(e) => {
               e.stopPropagation();
               setShowContextMenu(!showContextMenu);
             }}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+            className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-opacity
+              ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}
+            `}
           >
-            <MoreHorizontal className="w-3 h-3 text-gray-500" />
+            <MoreHorizontal className={`w-3 h-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
           </button>
         )}
       </div>
-      
+
       {showContextMenu && (
-        <div 
-          className="absolute top-full left-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg py-1 min-w-[150px]"
+        <div
+          className={`absolute top-full left-0 z-50 border rounded-md shadow-lg py-1 min-w-[150px]
+            ${theme === 'dark'
+              ? 'bg-secondary-800 border-gray-700'
+              : 'bg-white border-gray-200'
+            }`}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={startRename}
-            className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className={`flex items-center w-full px-3 py-2 text-sm ${
+              theme === 'dark'
+                ? 'text-gray-200 hover:bg-secondary-700'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
           >
             <Edit3 className="w-4 h-4 mr-2" />
             Rename
           </button>
           <button
             onClick={handleDelete}
-            className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-100"
+            className={`flex items-center w-full px-3 py-2 text-sm ${
+              theme === 'dark'
+                ? 'text-red-400 hover:bg-secondary-700'
+                : 'text-red-600 hover:bg-gray-100'
+            }`}
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Delete
           </button>
           {node.type === 'folder' && (
             <>
-              <hr className="my-1 border-gray-200" />
+              <hr className={theme === 'dark' ? 'my-1 border-gray-700' : 'my-1 border-gray-200'} />
               <button
                 onClick={() => handleAdd(false)}
-                className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className={`flex items-center w-full px-3 py-2 text-sm ${
+                  theme === 'dark'
+                    ? 'text-gray-200 hover:bg-secondary-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
               >
                 <File className="w-4 h-4 mr-2" />
                 New File
               </button>
               <button
                 onClick={() => handleAdd(true)}
-                className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className={`flex items-center w-full px-3 py-2 text-sm ${
+                  theme === 'dark'
+                    ? 'text-gray-200 hover:bg-secondary-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
               >
                 <Folder className="w-4 h-4 mr-2" />
                 New Folder
@@ -292,10 +334,10 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
           )}
         </div>
       )}
-      
+
       {node.children && node.isOpen && (
         <div>
-          {node.children.map((child) => (
+          {node.children.map((child: any) => (
             <FileTreeNode
               key={child.id}
               node={child}
@@ -319,7 +361,8 @@ const FileTree: React.FC<FileTreeProps> = ({ onFileSelect }) => {
   const [currentFolderPath, setCurrentFolderPath] = useState<string | null>(null);
   const socket = useSocket();
   const { roomId } = useParams<{ roomId: string }>();
-  
+  const { theme } = useTheme();
+
   // Use a ref to track open state that persists across renders
   const openStateRef = useRef<Map<string, boolean>>(new Map());
 
@@ -348,27 +391,6 @@ const FileTree: React.FC<FileTreeProps> = ({ onFileSelect }) => {
       openStateRef.current = getOpenState(fileTree);
     }
   }, [fileTree]);
-
-  // Expose buildFileTree function to parent component
-  // useEffect(() => {
-  //   // Update the FileTree context or parent with the buildFileTree function
-  //   // that preserves open state
-  //   if (typeof setFileTree === 'function') {
-  //     const originalSetFileTree = setFileTree;
-  //     const enhancedSetFileTree = (treeOrUpdater: any) => {
-  //       if (typeof treeOrUpdater === 'function') {
-  //         originalSetFileTree(treeOrUpdater);
-  //       } else {
-  //         // If it's raw data from server, build it with preserved state
-  //         const builtTree = buildFileTree(treeOrUpdater, openStateRef.current);
-  //         originalSetFileTree(builtTree);
-  //       }
-  //     };
-      
-  //     // You might want to expose this enhanced function to parent
-  //     // For now, we'll keep the original logic
-  //   }
-  // }, [setFileTree]);
 
   const handleSelect = (node: FileNode) => {
     setSelectedId(node.id);
@@ -449,29 +471,61 @@ const FileTree: React.FC<FileTreeProps> = ({ onFileSelect }) => {
   };
 
   return (
-    <div className="h-full bg-[#181818] overflow-y-auto">
-      <div className="h-10 p-3 bg-gray-800 text-secondary-500">
+    <div
+      className={`h-full overflow-y-auto transition-all duration-300 ${
+        theme === 'dark'
+          ? 'bg-gray-950 text-gray-100'
+          : 'bg-gray-50 text-gray-900'
+      }`}
+    >
+      <div
+        className={`h-10 p-3 text-secondary-500 transition-all duration-300 ${
+          theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
+        }`}
+      >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Files</h3>
+          <h3
+            className={`text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            }`}
+          >
+            Files
+          </h3>
           <div className="flex items-center space-x-1">
             <button
               onClick={() => handleAdd(false)}
-              className="p-1 btn btn-secondary rounded"
+              className={`p-1 btn btn-secondary rounded transition ${
+                theme === 'dark'
+                  ? 'hover:bg-gray-700'
+                  : 'hover:bg-gray-300'
+              }`}
               title="New File"
             >
-              <File className="w-4 h-4 text-gray-600" />
+              <File
+                className={`w-4 h-4 ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}
+              />
             </button>
             <button
               onClick={() => handleAdd(true)}
-              className="p-1 btn btn-secondary rounded"
+              className={`p-1 btn btn-secondary rounded transition ${
+                theme === 'dark'
+                  ? 'hover:bg-gray-700'
+                  : 'hover:bg-gray-300'
+              }`}
               title="New Folder"
             >
-              <Folder className="w-4 h-4 text-gray-600" />
+              <Folder
+                className={`w-4 h-4 ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}
+              />
             </button>
           </div>
         </div>
       </div>
-      
+
       <div className="py-2">
         {fileTree.map((node) => (
           <FileTreeNode

@@ -2,10 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { MonacoBinding } from 'y-monaco';
-import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness';
 import { useSocket } from '../context/SocketProvider';
 import * as monaco from 'monaco-editor';
-import { useUser } from '@context/UserContext';
 
 interface YjsInitPayload {
   roomId: string;
@@ -14,15 +12,10 @@ interface YjsInitPayload {
 
 interface YjsReadyPayload {
   filePath: string;
-  state: number[];
+  state: number[]; // Array sent from server
 }
 
 interface YjsUpdatePayload {
-  filePath: string;
-  update: number[];
-}
-
-interface AwarenessPayload {
   filePath: string;
   update: number[];
 }
@@ -32,74 +25,49 @@ export const useYjsEditor = (
   filePath: string | undefined,
   editor: monaco.editor.IStandaloneCodeEditor | null
 ) => {
-  const {user} = useUser();
   const socket = useSocket();
 
+  // Use state for values that need to trigger re-renders
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [binding, setBinding] = useState<MonacoBinding | null>(null);
-  const [awareness, setAwareness] = useState<Awareness | null>(null);
-
+  
+  // Keep refs for cleanup
   const ydocRef = useRef<Y.Doc | null>(null);
   const bindingRef = useRef<MonacoBinding | null>(null);
-  const awarenessRef = useRef<Awareness | null>(null);
 
   useEffect(() => {
+    // Clean up previous instances
     if (bindingRef.current) {
       bindingRef.current.destroy();
       bindingRef.current = null;
       setBinding(null);
     }
+    
     if (ydocRef.current) {
       ydocRef.current.destroy();
       ydocRef.current = null;
       setYdoc(null);
-    }
-    if (awarenessRef.current) {
-      awarenessRef.current.destroy();
-      awarenessRef.current = null;
-      setAwareness(null);
     }
 
     if (!roomId || !filePath || !editor) return;
 
     const newYdoc = new Y.Doc();
     const ytext = newYdoc.getText('monaco');
-    const newAwareness = new Awareness(newYdoc);
-
+    
     ydocRef.current = newYdoc;
-    awarenessRef.current = newAwareness;
     setYdoc(newYdoc);
-    setAwareness(newAwareness);
-
-    // Set local awareness state (cursor & user info)
-    newAwareness.setLocalStateField('user', {
-      id: socket.id,
-      name: user?.email||`User-${socket.id?.slice(0, 4)}`,
-      color: `hsl(${Math.random() * 360}, 70%, 70%)`,
-    });
-
-    newAwareness.setLocalStateField('cursor', {
-      position: editor.getPosition(),
-    });
-
-    // Update cursor awareness on cursor movement
-    const cursorListener = () => {
-      newAwareness.setLocalStateField('cursor', {
-        position: editor.getPosition(),
-      });
-    };
-    editor.onDidChangeCursorPosition(cursorListener);
 
     const newBinding = new MonacoBinding(
       ytext,
       editor.getModel()!,
       new Set([editor]),
-      newAwareness
+      null
     );
-
+    
     bindingRef.current = newBinding;
     setBinding(newBinding);
 
+    // Ask server for doc state
     socket.emit('yjs:init', { roomId, filePath } as YjsInitPayload);
 
     const handleReady = ({ filePath: receivedPath, state }: YjsReadyPayload) => {
@@ -114,21 +82,8 @@ export const useYjsEditor = (
       }
     };
 
-    const handleAwarenessUpdate = ({ filePath: receivedPath, update }: AwarenessPayload) => {
-      if (receivedPath === filePath && awarenessRef.current) {
-        try {
-          // Apply the awareness update correctly
-          applyAwarenessUpdate(awarenessRef.current, new Uint8Array(update), 'remote');
-        } catch (error) {
-          console.error('Failed to apply awareness update:', error);
-        }
-      }
-    };
-
-
     socket.on('yjs:ready', handleReady);
     socket.on('yjs:update', handleUpdate);
-    socket.on('awareness:update', handleAwarenessUpdate);
 
     const updateHandler = (update: Uint8Array) => {
       socket.emit('yjs:update', {
@@ -138,31 +93,11 @@ export const useYjsEditor = (
       } as YjsUpdatePayload & YjsInitPayload);
     };
 
-    const awarenessHandler = ({ added, updated, removed }: any) => {
-      if (!awarenessRef.current) return;
-      
-      const changedClients = Array.from(new Set([...added, ...updated, ...removed]));
-      
-      // Only send if there are actual changes and it's not just our own update
-      if (changedClients.length > 0) {
-        const awarenessUpdate = encodeAwarenessUpdate(awarenessRef.current, changedClients);
-        
-        socket.emit('awareness:update', {
-          roomId,
-          filePath,
-          update: Array.from(awarenessUpdate), // Changed from 'awareness' to 'update'
-        });
-      }
-    };
-
     newYdoc.on('update', updateHandler);
-    newAwareness.on('update', awarenessHandler);
 
     return () => {
       socket.off('yjs:ready', handleReady);
       socket.off('yjs:update', handleUpdate);
-      socket.off('awareness:update', handleAwarenessUpdate);
-
       if (ydocRef.current) {
         ydocRef.current.off('update', updateHandler);
         ydocRef.current.destroy();
@@ -170,22 +105,15 @@ export const useYjsEditor = (
       if (bindingRef.current) {
         bindingRef.current.destroy();
       }
-      if (awarenessRef.current) {
-        awarenessRef.current.off('update', awarenessHandler);
-        awarenessRef.current.destroy();
-      }
       ydocRef.current = null;
       bindingRef.current = null;
-      awarenessRef.current = null;
       setYdoc(null);
       setBinding(null);
-      setAwareness(null);
     };
   }, [roomId, filePath, editor, socket]);
 
   return {
     ydoc,
     binding,
-    awareness,
   };
 };

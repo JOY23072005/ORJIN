@@ -9,12 +9,13 @@ import ProtectedRoute from './components/ProtectedRoute'
 import './index.css'
 import { RoomProvider } from './context/RoomContext'
 import { FileTreeProvider } from './context/FileTreeContext.tsx'
-import SocketWrapper from '@components/SocketWrapper.tsx'
+import { SocketProvider } from '@context/SocketProvider.tsx'
 
 // Lazy load pages for better performance
 const Login = lazy(() => import('./pages/Login/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'))
 const Signup = lazy(() => import('./pages/Signup/Signup'))
+const Room = lazy(() => import('./pages/Room/Room'))
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
     <RoomProvider>
     <UserProvider>
     <FileTreeProvider>
+    <SocketProvider>
       <BrowserRouter>
       <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
         <Routes>
@@ -31,14 +33,14 @@ function App() {
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
-              <Route index element={<Dashboard />} />
-              
-                <Route path="room/:roomId" element={<SocketWrapper/>} />
+              <Route index element={<Dashboard />} />  
+              <Route path="room/:roomId" element={<Room/>} />
             </Route>
           </Route>
         </Routes>
       </Suspense>
       </BrowserRouter>
+    </SocketProvider>
     </FileTreeProvider>
     </UserProvider>
     </RoomProvider>

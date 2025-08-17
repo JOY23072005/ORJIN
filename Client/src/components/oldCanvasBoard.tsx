@@ -3,7 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSocket } from '@context/SocketProvider';
 import * as KonvaComponents from 'react-konva';
 import { useParams } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext';
+
+// // Use a dynamic import to ensure Konva components are loaded on the client side.
+// const KonvaComponents = React.lazy(() => import('react-konva'));
 
 // Define the type for a drawing line
 type LineData = {
@@ -13,13 +15,24 @@ type LineData = {
   brushSize: number;
 };
 
+// Define the drawing event data sent over the socket
 type DrawingEventData = {
   line: LineData;
 };
 
-const colors = ['#000000', '#ff0000', '#0000ff', '#008000', '#ffff00', '#ffa500', '#800080'];
+// Define the initial state for the colors
+const colors = [
+  '#000000', // Black
+  '#ff0000', // Red
+  '#0000ff', // Blue
+  '#008000', // Green
+  '#ffff00', // Yellow
+  '#ffa500', // Orange
+  '#800080', // Purple
+];
 
 const CanvasBoard = () => {
+  // State for the drawing lines and a flag for drawing in progress
   const [lines, setLines] = useState<LineData[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState<string>('#000000');
@@ -27,41 +40,51 @@ const CanvasBoard = () => {
   const socket = useSocket();
   const [userId, setUserId] = useState<string>('');
   const { roomId } = useParams();
-  const { theme } = useTheme();
 
+  // Ref for the Konva Stage component
   const stageRef = useRef<any>(null);
 
   useEffect(() => {
+    // Generate a unique user ID
     setUserId(uuidv4());
-    socket.emit('canvas:join', { roomId });
 
-    socket.on('drawing', ({ data }: { data: DrawingEventData }) => {
+    socket.emit('canvas:join',{roomId})
+
+    // Event listener for incoming drawing data from the server
+    socket.on('drawing', ({data,roomId}:{data: DrawingEventData,roomId:string}) => {
+      // Add the new line to the lines state
       setLines((prevLines) => {
-        const existingLineIndex = prevLines.findIndex((l) => l.id === data.line.id);
+        // If the line already exists (is being updated), replace it
+        const existingLineIndex = prevLines.findIndex(l => l.id === data.line.id);
         if (existingLineIndex !== -1) {
-          const updatedLines = [...prevLines];
-          updatedLines[existingLineIndex] = data.line;
-          return updatedLines;
+            const updatedLines = [...prevLines];
+            updatedLines[existingLineIndex] = data.line;
+            return updatedLines;
         }
+        // Otherwise, add a new line
         return [...prevLines, data.line];
       });
     });
 
+    // Event listener for a complete canvas state from the server (for new users)
     socket.on('canvasState', (initialLines: LineData[]) => {
       setLines(initialLines);
     });
-
+    
+    // Listen for a 'clear' event from the server
     socket.on('clear', () => {
       setLines([]);
     });
   }, []);
 
+  // Handler for mouse down event
   const handleMouseDown = (e: any) => {
     setIsDrawing(true);
     const stage = stageRef.current;
     if (stage) {
       const pos = stage.getPointerPosition();
       if (pos) {
+        // Create a new line with a unique ID and add it to the state
         const newLine: LineData = {
           id: uuidv4(),
           points: [pos.x, pos.y],
@@ -73,31 +96,40 @@ const CanvasBoard = () => {
     }
   };
 
+  // Handler for mouse move event
   const handleMouseMove = (e: any) => {
-    if (!isDrawing) return;
+    if (!isDrawing) {
+      return;
+    }
     const stage = stageRef.current;
     if (stage) {
       const pos = stage.getPointerPosition();
       if (pos) {
+        // Get the last line and add the new point
         const newLines = lines.slice();
         const lastLine = newLines[newLines.length - 1];
         lastLine.points = lastLine.points.concat([pos.x, pos.y]);
         setLines(newLines);
-        socket?.emit('drawing', { data: { line: lastLine }, roomId });
+        // Emit the drawing data to the server
+        socket?.emit('drawing', {data:{ line: lastLine },roomId:roomId });
       }
     }
   };
 
+  // Handler for mouse up event
   const handleMouseUp = () => {
     setIsDrawing(false);
   };
-
+  
   const handleClear = () => {
+    // Clear the local state and inform the server to clear for all clients
     setLines([]);
-    socket?.emit('clear', { roomId });
+    socket?.emit('clear',{roomId:roomId});
   };
 
+  // Add touch event handlers
   const handleTouchStart = (e: any) => {
+    // Prevent the default behavior to avoid scrolling
     e.evt.preventDefault();
     handleMouseDown(e);
   };
@@ -112,40 +144,26 @@ const CanvasBoard = () => {
   };
 
   return (
-    <div
-      className={`flex flex-col h-screen font-sans transition-colors duration-300 ${
-        theme === 'dark' ? 'bg-gray-950 text-gray-100' : 'bg-gray-100 text-gray-900'
-      }`}
-    >
-      {/* Header */}
-      <header
-        className={`p-4 shadow-md flex justify-between items-center transition-colors duration-300 ${
-          theme === 'dark' ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-800'
-        }`}
-      >
-        <h1 className="text-2xl font-bold">Collaborative Whiteboard</h1>
-        <div className="text-sm">
+    <div className="flex flex-col h-screen bg-gray-100 font-sans">
+      {/* Header and User ID display */}
+      <header className="p-4 bg-white shadow-md flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">Collaborative Whiteboard</h1>
+        <div className="text-sm text-gray-600">
           Your ID: <span className="font-mono text-xs">{userId}</span>
         </div>
       </header>
 
-      {/* Content */}
+      {/* Main content area with controls and canvas */}
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         {/* Controls */}
-        <div
-          className={`p-4 rounded-xl shadow-lg flex flex-wrap gap-4 mb-4 transition-colors duration-300 ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-          }`}
-        >
+        <div className="bg-white p-4 rounded-xl shadow-lg flex flex-wrap gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <label className="font-medium">Brush Color:</label>
+            <label className="text-gray-700 font-medium">Brush Color:</label>
             <div className="flex gap-2">
               {colors.map((c) => (
                 <button
                   key={c}
-                  className={`w-8 h-8 rounded-full border-2 transform transition-transform duration-100 hover:scale-110 ${
-                    color === c ? 'border-gray-500 scale-110' : 'border-transparent'
-                  }`}
+                  className={`w-8 h-8 rounded-full border-2 transform transition-transform duration-100 hover:scale-110 ${color === c ? 'border-gray-500 scale-110' : 'border-transparent'}`}
                   style={{ backgroundColor: c }}
                   onClick={() => setColor(c)}
                   title={c}
@@ -153,9 +171,8 @@ const CanvasBoard = () => {
               ))}
             </div>
           </div>
-
           <div className="flex items-center gap-2">
-            <label className="font-medium" htmlFor="brushSize">
+            <label className="text-gray-700 font-medium" htmlFor="brushSize">
               Brush Size:
             </label>
             <input
@@ -167,9 +184,8 @@ const CanvasBoard = () => {
               onChange={(e) => setBrushSize(parseInt(e.target.value))}
               className="w-32"
             />
-            <span className="font-mono text-sm">{brushSize}</span>
+            <span className="text-gray-600 font-mono text-sm">{brushSize}</span>
           </div>
-
           <button
             onClick={handleClear}
             className="px-4 py-2 bg-red-500 text-white rounded-lg shadow-sm hover:bg-red-600 transition-colors"
@@ -178,27 +194,17 @@ const CanvasBoard = () => {
           </button>
         </div>
 
-        {/* Canvas */}
+        {/* Konva drawing canvas */}
         <div
-          className={`flex-1 w-full rounded-xl shadow-lg border overflow-hidden transition-colors duration-300 ${
-            theme === 'dark'
-              ? 'bg-gray-800 border-gray-700'
-              : 'bg-white border-gray-200'
-          }`}
-          style={{ touchAction: 'none' }}
+          className="flex-1 w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
+          style={{ touchAction: 'none' }} // Prevents browser from handling touch as scroll
         >
-          <Suspense
-            fallback={
-              <div className="flex justify-center items-center h-full text-lg text-gray-500">
-                Loading drawing canvas...
-              </div>
-            }
-          >
+          <Suspense fallback={<div className="flex justify-center items-center h-full text-lg text-gray-500">Loading drawing canvas...</div>}>
             {KonvaComponents && (
               <KonvaComponents.Stage
                 ref={stageRef}
-                width={window.innerWidth - 64}
-                height={window.innerHeight - 200}
+                width={window.innerWidth - 64} // Adjust for padding
+                height={window.innerHeight - 200} // Adjust for header and controls
                 onMouseDown={handleMouseDown}
                 onMousemove={handleMouseMove}
                 onMouseup={handleMouseUp}
@@ -208,7 +214,7 @@ const CanvasBoard = () => {
                 className="cursor-crosshair"
               >
                 <KonvaComponents.Layer>
-                  {lines.map((line) => (
+                  {lines.map((line, i) => (
                     <KonvaComponents.Line
                       key={line.id}
                       points={line.points}

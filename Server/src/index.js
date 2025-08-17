@@ -7,6 +7,8 @@ import fileSocketHandler from './sockets/fileSocket.js';
 import canvasSocketHandler from './sockets/canvasSocket.js';
 import { connectDB } from './utils/db.js';
 import dotenv from "dotenv";
+import Room from './models/room.model.js';
+import socketHandler from './sockets/socketHandler.js';
 dotenv.config();
 
 const app = express();
@@ -24,7 +26,7 @@ const server = http.createServer(app);
 // ✅ Pass matching CORS config to Socket.IO
 const io = new SocketServer(server, {
   cors: {
-    origin: '*',
+    origin: process.env.CLIENT_URL,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -35,12 +37,12 @@ app.get('/ping', (req, res) => {
   res.status(200).send('pong');
 });
 
+
 // ✅ Connect MongoDB
 await connectDB();
 
 // ✅ Attach Socket.IO handlers
-fileSocketHandler(io);
-canvasSocketHandler(io);
+socketHandler(io);
 
 // ✅ Listen on PORT
 const PORT = process.env.PORT || 9000;

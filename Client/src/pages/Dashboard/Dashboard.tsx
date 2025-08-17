@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Sidebar from '@components/Sidebar';
 import RoomCard from '@components/RoomCard';
 import { Menu } from 'lucide-react';
@@ -6,12 +6,23 @@ import { useNavigate } from 'react-router-dom';
 import { useRoom } from '@context/RoomContext';
 import { useTheme } from '@context/ThemeContext';
 import { useFileTree } from '@context/FileTreeContext';
+import { useUser } from '@context/UserContext';
+import { useSocket } from '@context/SocketProvider';
+import { toast } from 'react-toastify';
+import { ToastPrompt } from '@components/auth/ToastPrompt';
+import { update } from 'lodash';
 
-const dummyRooms = [
-  { id: 1, name: 'Frontend Devs', users: 5 },
-  { id: 2, name: 'Backend Wizards', users: 3 },
-  { id: 3, name: 'UI/UX Team', users: 7 },
-];
+interface RoomMember {
+  userId: string;
+  role: 'owner' | 'editor' | 'viewer';
+}
+
+interface Room {
+  id: string;
+  name: string;
+  createdBy: string;
+  members: RoomMember[];
+}
 
 const DashboardHeader: React.FC<{
   onCreateRoom: () => void;
@@ -66,22 +77,146 @@ const DashboardHeader: React.FC<{
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { joinRoom } = useRoom();
+  const { joinRoom,joinedRooms,setJoinedRooms,leaveRoom } = useRoom();
   const { theme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isGuest,setIsGuest] = useState<boolean>(false);
+  const { user } = useUser();
+  const socket = useSocket();
+  const [loading, setLoading] = useState(false);
+  const [name,setName] = useState<string>('');
 
-  const handleCreateRoom = () => {
-    const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    joinRoom(newRoomId);
-    navigate(`/room/${newRoomId}`);
+  useEffect(()=>{
+    setIsGuest(Boolean(localStorage.getItem('isGuestUser')));
+  },[isGuest]);
+
+  const handleRoomUpdate = useCallback(({ rooms }: { rooms: Room[] }) => {
+    setJoinedRooms(rooms);
+  }, []);
+
+  const handleRoomLeave = (roomId:string)=>{
+    leaveRoom(roomId);
+    getRooms();
+    toast.success("Room deleted successfully!");
+  }
+
+  // Fetch rooms function
+  const getRooms = useCallback(async () => {
+    if (!user?.email || !socket) return;
+    
+    try {
+      setLoading(true);
+      socket.emit('rooms:get', { email: user?.email });
+    } catch (err) {
+      toast.error("Error while loading rooms");
+      console.error('Room fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.email, socket]);
+
+  // Setup socket listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('rooms:fetched', handleRoomUpdate);
+    socket.on('room:deleted',handleRoomLeave);
+    socket.on('room:error', (err: { message: string }) => {
+      toast.error(err.message);
+    });
+
+    return () => {
+      socket.off('rooms:fetched', handleRoomUpdate);
+      socket.off('room:deleted',handleRoomLeave);
+      socket.off('room:error');
+    };
+  }, [socket, handleRoomUpdate]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (user?.email && user?.email !== 'Guest') {
+      getRooms();
+    }
+  }, [user?.email, getRooms]);
+
+  const showPrompt = (msg:string) => {
+    return new Promise((resolve) => {
+      const toastId = toast(
+        <ToastPrompt
+          message={msg}
+          onSubmit={(value) => {
+            toast.dismiss(toastId);
+            resolve(value); // Resolve the promise with the new name
+          }}
+          onCancel={() => {
+            toast.dismiss(toastId);
+            resolve(null); // Resolve with null if canceled
+          }}
+        />,
+        {
+          position: 'top-center',
+          autoClose: false,
+          closeOnClick: false,
+        }
+      );
+    });
+  }
+
+  const handleCreateRoom = useCallback(async() => {
+    if(user?.email==='Guest'){
+      toast.error('Guest users can only join room please click "Join Room" for joining "dummyroom"');
+      return;
+    }
+    else{
+      const newName = await showPrompt('Enter Room Name');
+      if(newName)
+        socket.emit('room:create',{email:user?.email,name:newName});
+      else 
+        socket.emit('room:create',{email:user?.email});
+    }
+  },[socket,user?.email]);
+
+  const handleJoin = async ({roomId}:{roomId:string})=>{
+    if(user){
+      const newRoom:Room = {
+        id:roomId,
+        name:name,
+        createdBy: user.email,
+        members:[{
+          userId:user.email,
+          role:'owner'
+        }]
+      }
+      joinRoom(newRoom);
+      navigate(`/room/${roomId}`);
+    }
+  }
+
+  useEffect(()=>{
+    socket.on('room:created',handleJoin);
+    return ()=>{socket.off('room:created',handleJoin)}
+  },[socket])
+
+  const handleJoinRoom = async () => {
+    if(isGuest){
+      navigate(`/room/ORJINDummyRoom`);
+    }
+    else{
+      const roomId = await showPrompt("Enter RoomId");
+      if(roomId){
+        navigate(`/room/${roomId}`);
+      }else{
+        toast.error("Please enter a valid RoomId");
+      }
+    }
   };
 
-  const handleJoinRoom = () => {
-    alert('Join Room feature coming soon!');
-  };
-
-  return (
-    <div className={`min-h-screen h-full w-full overflow-hidden flex flex-col font-sans transition-all duration-300 ${
+  return (<>
+    {loading ? <div className={`min-h-screen h-full w-full overflow-hidden flex flex-col font-sans transition-all duration-300 ${
+      theme === 'dark'
+        ? 'bg-gradient-to-br from-[#6a8dff]/60 via-[#b67cff]/60 to-[#f7f8fa]/60'
+        : 'bg-gradient-to-br from-[#6a8dff]/20 via-[#b67cff]/20 to-[#f7f8fa]/20'
+    }`}><h1>Loading</h1></div>:<div className={`min-h-screen h-full w-full overflow-hidden flex flex-col font-sans transition-all duration-300 ${
       theme === 'dark'
         ? 'bg-gradient-to-br from-[#6a8dff]/60 via-[#b67cff]/60 to-[#f7f8fa]/60'
         : 'bg-gradient-to-br from-[#6a8dff]/20 via-[#b67cff]/20 to-[#f7f8fa]/20'
@@ -115,9 +250,17 @@ const Dashboard: React.FC = () => {
         />
         <div className="flex-1 flex flex-col justify-center w-full h-full px-6 sm:px-10 lg:px-16 pb-8">
         <section className="flex flex-wrap gap-10 items-start justify-start sm:justify-center w-full h-full mt-10">
-        {dummyRooms.map((room, idx) => (
+        {joinedRooms.length==0?<div
+                className={`backdrop-blur-lg max-w-[98%] border shadow-xl rounded-2xl p-8 flex flex-col gap-4 transition-transform duration-300 hover:scale-105 hover:shadow-2xl hover:-translate-y-1 animate-fade-in group cursor-pointer ${
+                  theme === 'dark'
+                    ? 'bg-white/10 border-white/20'
+                    : 'bg-white/60 border-gray-200'
+                }`}
+              >
+                <p>No Rooms Joined</p>
+              </div> :joinedRooms.map((room:Room, idx) => (
               <div
-                key={room.id}
+                key={idx}
                 className={`backdrop-blur-lg max-w-[98%] border shadow-xl rounded-2xl p-8 flex flex-col gap-4 transition-transform duration-300 hover:scale-105 hover:shadow-2xl hover:-translate-y-1 animate-fade-in group cursor-pointer ${
                   theme === 'dark'
                     ? 'bg-white/10 border-white/20'
@@ -130,7 +273,8 @@ const Dashboard: React.FC = () => {
           </section>
         </div>
       </main>
-    </div>
+    </div>}
+    </>
   );
 };
 

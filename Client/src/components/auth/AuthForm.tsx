@@ -2,24 +2,34 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useTheme } from '../../context/ThemeContext';
+import { Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 interface AuthFormProps {
-  setError: (msg: string) => void;
   setLoading: (loading: boolean) => void;
   loading: boolean;
 }
 
-const AuthForm: React.FC<AuthFormProps> = ({ setError, setLoading, loading }) => {
-  const { login } = useUser();
+const AuthForm: React.FC<AuthFormProps> = ({  setLoading, loading }) => {
+  const { login,guest } = useUser();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
 
+  const handleGuest = async ()=>{
+    const success = await guest();
+    if(success){
+      navigate('/');
+    }
+    else{
+      toast.error('Error while logging in');
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
     try {
       // Check credentials in localStorage
@@ -30,13 +40,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ setError, setLoading, loading }) =>
         if (success) {
           navigate('/');
         } else {
-          setError('Invalid email or password');
+          toast.error('Invalid email or password');
         }
       } else {
-        setError('Invalid email or password');
+        toast.error('Invalid email or password');
       }
     } catch (err) {
-      setError('An error occurred during login');
+      toast.error('An error occurred during login');
     } finally {
       setLoading(false);
     }
@@ -102,6 +112,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ setError, setLoading, loading }) =>
           />
           Remember me
         </label>
+        <button className="text-sm text-primary-500 hover:underline" onClick={handleGuest}>Login as guest</button>
         <a href="#" className="text-sm text-primary-500 hover:underline">Forgot password?</a>
       </div>
       <button

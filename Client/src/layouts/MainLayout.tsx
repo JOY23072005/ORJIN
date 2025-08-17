@@ -3,8 +3,7 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from '../components/auth/ThemeToggle';
 import { useEffect, useState } from 'react';
-import ErrorAlert from "../components/auth/ErrorAlert";
-
+import {ToastContainer,Bounce, toast} from 'react-toastify';
 const MainLayout = () => {
   const { logout, user } = useUser();
   const { theme } = useTheme();
@@ -15,13 +14,11 @@ const MainLayout = () => {
     navigate('/login');
   };
 
-  const [backendOnline,setBackendOnline]= useState(false);
-  
   useEffect(() => {
     const checkBackend = () => {
       fetch(`${import.meta.env.VITE_SERVER_URL}/ping`)
-        .then(() => setBackendOnline(true))
-        .catch(() => setBackendOnline(false));
+        .then(() => {})
+        .catch(() => {toast.error(`Waiting For connecting Server : ${import.meta.env.VITE_SERVER_URL}`)});
     };
 
     // Check immediately on mount
@@ -76,7 +73,20 @@ const MainLayout = () => {
         </div>
       </header>
 
-      {!backendOnline && <ErrorAlert message={`Waiting for backend ${import.meta.env.VITE_SERVER_URL} to Connect`}/>}
+      {/* {!backendOnline && <ErrorAlert message={`Waiting for backend ${import.meta.env.VITE_SERVER_URL} to Connect`}/>} */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={theme}
+        transition={Bounce}
+        />
 
       {/* Main content */}
       <main className="flex-grow w-full">

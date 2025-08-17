@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import AuthHeader from '../../components/auth/AuthHeader';
-import ErrorAlert from '../../components/auth/ErrorAlert';
 import ThemeToggle from '../../components/auth/ThemeToggle';
 import FooterLinks from '../../components/auth/FooterLinks';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
+import { toast, ToastContainer, Bounce } from 'react-toastify';
 
 const Signup = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -21,28 +20,27 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     if (!name || !email || !password || !confirmPassword) {
-      setError('All fields are required.');
+      toast.error('All fields are required.');
       return;
     }
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address.');
+      toast.error('Please enter a valid email address.');
       return;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+      toast.error('Password must be at least 6 characters.');
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      toast.error('Passwords do not match.');
       return;
     }
     setLoading(true);
     // Store user in localStorage
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     if (users.find((u: any) => u.email === email)) {
-      setError('An account with this email already exists.');
+      toast.error('An account with this email already exists.');
       setLoading(false);
       return;
     }
@@ -59,7 +57,19 @@ const Signup = () => {
       <div className="flex flex-col h-full w-full items-center justify-center animate-fade-in">
         <AuthHeader />
         <div className="w-full max-w-md mt-6">
-          {error && <ErrorAlert message={error} />}
+          <ToastContainer
+            position="top-center"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick={false}
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme={theme}
+            transition={Bounce}
+          />
           <form className="space-y-6 animate-fade-in" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-4">
               <div>

@@ -2,22 +2,34 @@ import { useState } from 'react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import AuthForm from '../../components/auth/AuthForm';
 import AuthHeader from '../../components/auth/AuthHeader';
-import ErrorAlert from '../../components/auth/ErrorAlert';
 import ThemeToggle from '../../components/auth/ThemeToggle';
 import FooterLinks from '../../components/auth/FooterLinks';
 import { Link } from 'react-router-dom';
+import { ToastContainer,Bounce } from 'react-toastify';
+import { useTheme } from '@context/ThemeContext';
 
 const Login = () => {
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const { theme } = useTheme();
   return (
     <AuthLayout>
       <div className="flex flex-col h-full w-full items-center justify-center animate-fade-in">
         <AuthHeader />
         <div className="w-full max-w-md mt-6">
-          {error && <ErrorAlert message={error} />}
-          <AuthForm setError={setError} setLoading={setLoading} loading={loading} />
+          <ToastContainer
+            position="top-center"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick={false}
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme={theme}
+            transition={Bounce}
+          />
+          <AuthForm setLoading={setLoading} loading={loading} />
           <div className="my-6 flex items-center justify-center">
             <span className="text-gray-400 text-xs">OR</span>
           </div>
